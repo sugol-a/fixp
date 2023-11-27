@@ -35,42 +35,96 @@ namespace fixp {
         private:
             static constexpr std::size_t TotalBits = sizeof(Storage) * 8;
             static constexpr std::size_t IntegralBits = TotalBits - FracBits;
-            using selftype = fixed<FracBits, Storage, Intermediate>;
+            static constexpr Storage Scale = 1 << FracBits;
+            using self_type = fixed<FracBits, Storage, Intermediate>;
 
         private:
             Storage raw;
+        public:
+            using underlying_type = Storage;
+            
+            static constexpr self_type PI  = static_cast<Storage>(3.1415926535f * Scale);
+            static constexpr self_type TAU = static_cast<Storage>(6.2831853071f * Scale);
+            static constexpr self_type E   = static_cast<Storage>(2.7182818284f * Scale);
 
         public:
             fixed() : raw(0) { }
-            fixed(Storage raw_value) : raw(raw_value) { }
-            fixed(float value) {
+
+            constexpr fixed(Storage raw_value) : raw(raw_value) { }
+
+            constexpr fixed(float value) {
                 raw = static_cast<Storage>(value * (1 << FracBits));
             }
 
-            inline selftype operator+(const selftype& other) const {
-                return fixed(raw + other.raw);
+            inline self_type operator+(const self_type& other) const {
+                return fixed(static_cast<Storage>(raw + other.raw));
             }
 
-            inline selftype operator-(const selftype& other) const {
-                return fixed(raw - other.raw);
+            inline self_type operator-(const self_type& other) const {
+                return fixed(static_cast<Storage>(raw - other.raw));
             }
 
-            inline selftype operator*(const selftype& other) const {
+            inline self_type operator*(const self_type& other) const {
                 Intermediate im = raw * other.raw;
                 return fixed(static_cast<Storage>(im >> FracBits));
             }
 
-            inline selftype operator/(const selftype& other) const {
+            inline self_type operator/(const self_type& other) const {
                 Intermediate im = (static_cast<Intermediate>(raw) << static_cast<Intermediate>(FracBits)) / static_cast<Intermediate>(other.raw);
                 return fixed(static_cast<Storage>(im));
             }
 
-            operator Storage() const {
+            inline self_type& operator+=(const self_type& other) {
+                raw += other.raw;
+                return *this;
+            }
+
+            inline self_type& operator-=(const self_type& other) {
+                raw -= other.raw;
+                return *this;
+            }
+
+            inline self_type& operator*=(const self_type& other) {
+                const self_type result = *this * other;
+                raw = result.raw;
+                return *this;
+            }
+
+            inline self_type& operator/=(const self_type& other) {
+                const self_type result = *this / other;
+                raw = result.raw;
+                return *this;
+            }
+
+            constexpr operator Storage() const {
                 return raw;
             }
 
             inline float to_float() const {
-                return static_cast<float>(raw) / static_cast<float>(1 << FracBits);
+                return static_cast<float>(raw) / static_cast<float>(Scale);
+            }
+
+            static inline self_type sin(const self_type& value) {
+                // We use a Taylor expansion using coefficients stolen from here:
+                // http://www.sahraid.com/FFT/FixedPointArithmatic
+                static constexpr self_type a1 = static_cast<Storage>(-0.16605f * static_cast<float>(Scale));
+                static constexpr self_type a2 = static_cast<Storage>(0.00761f * static_cast<float>(Scale));
+
+                const self_type x_pow2 = value * value;
+                const self_type x_pow4 = x_pow2 * x_pow2;
+                const self_type intermediate = static_cast<Storage>(Scale + (a1 * x_pow2 + a2 * x_pow4).raw);
+
+                return intermediate * value;
+            }
+
+            static inline self_type cos(const self_type& value) {
+                static constexpr self_type a1 = static_cast<Storage>(-0.49670f * static_cast<float>(Scale));
+                static constexpr self_type a2 = static_cast<Storage>(0.03705f * static_cast<float>(Scale));
+
+                const self_type x_pow2 = value * value;
+                const self_type x_pow4 = x_pow2 * x_pow2;
+
+                return fixed(static_cast<Storage>(Scale + (a1 * x_pow2 + a2 * x_pow4).raw));
             }
     };
 }
