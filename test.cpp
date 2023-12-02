@@ -1,7 +1,5 @@
 #include <cstdint>
 #include <iostream>
-#include <bitset>
-#include <format>
 #include "fixp.hpp"
 
 using fixed = fixp::fixed<12>;
@@ -9,19 +7,14 @@ using fixed = fixp::fixed<12>;
 int
 main(int argc, char* argv[])
 {
-    for (float x = 0.0f; x < 1.2; x += 0.01f) {
+    std::cout << "x,float sin(x),fixed sin(x)" << std::endl;
+    for (float x = 0.0f; x < 2.0f * std::numbers::pi; x += 0.001f) {
         fixed value = x;
 
-        fixed sin_x = fixed::sin(value);
-        fixed cos_x = fixed::cos(value);
+        const fixed sin_x = fixed::sin(value);
+        const float real_sin_x = std::sin(value.to_float());
 
-        float real_sin_x = std::sin(value.to_float());
-        float real_cos_x = std::cos(value.to_float());
-
-        std::cout << std::format("sin({}) = {}", value.to_float(), sin_x.to_float()) << std::endl;;
-        std::cout << std::format("real sin({}) = {}", value.to_float(), real_sin_x) << std::endl;;
-        std::cout << std::format("cos({}) = {}", value.to_float(), cos_x.to_float()) << std::endl;
-        std::cout << std::format("real cos({}) = {}", value.to_float(), real_cos_x) << std::endl;
+        std::cout << x << "," << real_sin_x << "," << sin_x.to_float() << std::endl;
     }
     return 0;
 }

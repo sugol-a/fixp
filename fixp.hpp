@@ -22,11 +22,29 @@
 #include <cmath>
 #include <type_traits>
 #include <cstdint>
+#include <numbers>
 
 namespace fixp {
+    
     template<typename T>
     concept is_integral = std::is_integral<T>::value;
 
+    // template<const std::size_t FracBits, is_integral Storage = std::int16_t, is_integral Intermediate = std::int32_t>
+    // requires (sizeof(Storage) * 8 > FracBits && sizeof(Intermediate) > sizeof(Storage))
+    // class fixed;
+
+    // namespace constants {
+    //     #define DEFCONST \
+    //         template<const std::size_t FracBits, is_integral Storage = std::int16_t, is_integral Intermediate = std::int32_t> \
+    //         static constexpr fixed<FracBits, Storage, Intermediate>
+
+    //     DEFCONST PI  = std::numbers::pi_v<float>;
+    //     DEFCONST TAU = 2.0f * std::numbers::pi_v<float>;
+    //     DEFCONST E   = std::numbers::e_v<float>;
+
+    //     #undef DEFCONST
+    // }
+    
     template<const std::size_t FracBits,
              is_integral Storage = std::int16_t,
              is_integral Intermediate = std::int32_t>
@@ -36,67 +54,84 @@ namespace fixp {
             static constexpr std::size_t TotalBits = sizeof(Storage) * 8;
             static constexpr std::size_t IntegralBits = TotalBits - FracBits;
             static constexpr Storage Scale = 1 << FracBits;
-            using self_type = fixed<FracBits, Storage, Intermediate>;
+            static constexpr Storage FracMask = ((-1) << FracBits) >> FracBits;
+            static constexpr Storage IntMask = ((-1) >> FracBits) << FracBits;
 
         private:
             Storage raw;
+
         public:
-            using underlying_type = Storage;
+            constexpr fixed() { }
             
-            static constexpr self_type PI  = static_cast<Storage>(3.1415926535f * Scale);
-            static constexpr self_type TAU = static_cast<Storage>(6.2831853071f * Scale);
-            static constexpr self_type E   = static_cast<Storage>(2.7182818284f * Scale);
-
-        public:
-            fixed() : raw(0) { }
-
             constexpr fixed(Storage raw_value) : raw(raw_value) { }
 
             constexpr fixed(float value) {
-                raw = static_cast<Storage>(value * (1 << FracBits));
+                raw = static_cast<Storage>(value * Scale);
             }
 
-            inline self_type operator+(const self_type& other) const {
+            inline const fixed<FracBits, Storage, Intermediate>&
+            operator=(float value) {
+                raw = static_cast<Storage>(value * Scale);
+                return *this;
+            }
+
+            template<is_integral T>
+            inline const fixed<FracBits, Storage, Intermediate>&
+            operator=(T value) {
+                *this = static_cast<float>(value);
+                return *this;
+            }
+
+            inline fixed<FracBits, Storage, Intermediate>
+            operator+(const fixed<FracBits, Storage, Intermediate>& other) const {
                 return fixed(static_cast<Storage>(raw + other.raw));
             }
 
-            inline self_type operator-(const self_type& other) const {
+            inline fixed<FracBits, Storage, Intermediate>
+            operator-(const fixed<FracBits, Storage, Intermediate>& other) const {
                 return fixed(static_cast<Storage>(raw - other.raw));
             }
 
-            inline self_type operator*(const self_type& other) const {
+            inline fixed<FracBits, Storage, Intermediate>
+            operator*(const fixed<FracBits, Storage, Intermediate>& other) const {
                 Intermediate im = raw * other.raw;
                 return fixed(static_cast<Storage>(im >> FracBits));
             }
 
-            inline self_type operator/(const self_type& other) const {
+            inline fixed<FracBits, Storage, Intermediate>
+            operator/(const fixed<FracBits, Storage, Intermediate>& other) const {
                 Intermediate im = (static_cast<Intermediate>(raw) << static_cast<Intermediate>(FracBits)) / static_cast<Intermediate>(other.raw);
                 return fixed(static_cast<Storage>(im));
             }
 
-            inline self_type& operator+=(const self_type& other) {
+            inline fixed<FracBits, Storage, Intermediate>&
+            operator+=(const fixed<FracBits, Storage, Intermediate>& other) {
                 raw += other.raw;
                 return *this;
             }
 
-            inline self_type& operator-=(const self_type& other) {
+            inline fixed<FracBits, Storage, Intermediate>&
+            operator-=(const fixed<FracBits, Storage, Intermediate>& other) {
                 raw -= other.raw;
                 return *this;
             }
 
-            inline self_type& operator*=(const self_type& other) {
-                const self_type result = *this * other;
+            inline fixed<FracBits, Storage, Intermediate>&
+            operator*=(const fixed<FracBits, Storage, Intermediate>& other) {
+                const auto result = *this * other;
                 raw = result.raw;
                 return *this;
             }
 
-            inline self_type& operator/=(const self_type& other) {
-                const self_type result = *this / other;
+            inline fixed<FracBits, Storage, Intermediate>&
+            operator/=(const fixed<FracBits, Storage, Intermediate>& other) {
+                const auto result = *this / other;
                 raw = result.raw;
                 return *this;
             }
 
-            constexpr operator Storage() const {
+            constexpr operator
+            Storage() const {
                 return raw;
             }
 
@@ -104,27 +139,89 @@ namespace fixp {
                 return static_cast<float>(raw) / static_cast<float>(Scale);
             }
 
-            static inline self_type sin(const self_type& value) {
+            inline int truncate() const {
+                return (raw & IntMask) >> FracBits;
+            }
+
+            static inline fixed<FracBits, Storage, Intermediate>
+            remap_trig_parameter(const fixed<FracBits, Storage, Intermediate>& value, int quadrant) {
+                constexpr fixed inverse_tau = 1.0f / (2.0f * std::numbers::pi_v<float>);
+                constexpr fixed half_pi = 0.5f * std::numbers::pi_v<float>;
+                constexpr fixed inverse_half_pi = 2.0f / std::numbers::pi_v<float>;
+                constexpr fixed pi = std::numbers::pi_v<float>;
+                constexpr fixed two_pi = 2.0f * std::numbers::pi_v<float>;
+
+                const Storage cycle = (value * inverse_tau).truncate();
+
+                fixed remapped;
+
+                switch (quadrant) {
+                    case 0:
+                        remapped = value;
+                        break;
+
+                    case 1:
+                        remapped = half_pi - value;
+                        break;
+
+                    case 2:
+                        remapped = value - pi;
+                        break;
+
+                    case 3:
+                        remapped = two_pi - value;
+                        break;
+                }
+
+                return fixed(static_cast<Storage>(value.raw - cycle * two_pi));
+            }
+
+            static inline Storage get_trig_quadrant(const fixed<FracBits, Storage, Intermediate>& value) {
+                constexpr fixed inverse_half_pi = 2.0f / std::numbers::pi_v<float>;
+                const Storage quadrant = (value * inverse_half_pi).truncate();
+                return quadrant;
+            }
+
+            static inline fixed<FracBits, Storage, Intermediate>
+            sin_quadrant(const fixed<FracBits, Storage, Intermediate>& value, Storage quadrant) {
                 // We use a Taylor expansion using coefficients stolen from here:
                 // http://www.sahraid.com/FFT/FixedPointArithmatic
-                static constexpr self_type a1 = static_cast<Storage>(-0.16605f * static_cast<float>(Scale));
-                static constexpr self_type a2 = static_cast<Storage>(0.00761f * static_cast<float>(Scale));
+                static constexpr fixed a1 = -0.16605f;
+                static constexpr fixed a2 = 0.00761f;
 
-                const self_type x_pow2 = value * value;
-                const self_type x_pow4 = x_pow2 * x_pow2;
-                const self_type intermediate = static_cast<Storage>(Scale + (a1 * x_pow2 + a2 * x_pow4).raw);
+                const fixed x_pow2 = value * value;
+                const fixed x_pow4 = x_pow2 * x_pow2;
+                const fixed<FracBits, Storage, Intermediate> intermediate =
+                    static_cast<Storage>(Scale + (a1 * x_pow2 + a2 * x_pow4).raw);
 
-                return intermediate * value;
+                const Storage sign = (quadrant / 2) * -1 + 1 - (quadrant / 2)) * 1;
+                
+                return fixed(static_cast<Storage>(sign * intermediate.raw * value.raw));
             }
 
-            static inline self_type cos(const self_type& value) {
-                static constexpr self_type a1 = static_cast<Storage>(-0.49670f * static_cast<float>(Scale));
-                static constexpr self_type a2 = static_cast<Storage>(0.03705f * static_cast<float>(Scale));
+            static inline fixed<FracBits, Storage, Intermediate>
+            cos_quadrant(const fixed<FracBits, Storage, Intermediate>& value, Storage quadrant) {
+                static constexpr fixed a1 = -0.49670f;
+                static constexpr fixed a2 = 0.03705f;
 
-                const self_type x_pow2 = value * value;
-                const self_type x_pow4 = x_pow2 * x_pow2;
+                const fixed x_pow2 = value * value;
+                const fixed x_pow4 = x_pow2 * x_pow2;
 
-                return fixed(static_cast<Storage>(Scale + (a1 * x_pow2 + a2 * x_pow4).raw));
+                const Storage sign = (quadrant / 2) * -1 + (1 - (quadrant % 2)) * 1;
+
+                return fixed(sign * static_cast<Storage>(Scale + (a1 * x_pow2 + a2 * x_pow4).raw));
             }
-    };
+
+            static inline fixed<FracBits, Storage, Intermediate> sin(const fixed<FracBits, Storage, Intermediate>& value) {
+                const Storage quadrant = get_trig_quadrant(value);
+                const fixed remapped = remap_trig_parameter(value, quadrant);
+                return sin_quadrant(remapped, quadrant);
+            }
+
+            static inline fixed<FracBits, Storage, Intermediate> cos(const fixed<FracBits, Storage, Intermediate>& value) {
+                const int quadrant = get_trig_quadrant(value);
+                const fixed remapped = remap_trig_parameter(value, quadrant);
+                return cos_quadrant(remapped, quadrant);
+            }
+    };    
 }
