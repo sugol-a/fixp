@@ -4,7 +4,7 @@
 #include <cmath>
 #include "fixp.hpp"
 
-using fixed = fixp::fixed<14, std::int32_t, std::int64_t>;
+using fixed = fixp::fixed<12>;
 
 template <typename T>
 std::string
@@ -24,10 +24,9 @@ int
 main(int argc, char* argv[])
 {
     std::cout << "x,fixed sqrt(x),real sqrt(x)" << std::endl;
-    for (float x = 0; x < 3.0f; x += 0.01) {
-        fixed fx_sqrt = fixed::sqrt<1024>(x);
 
-        std::cout << x << "," << fx_sqrt.to_float() << "," << std::sqrt(x) << std::endl;
+    for (fixed x = 0.0f; x < 3.0f; x += 0.01f) {
+        std::cout << x.to_float() << "\t" << x.to_string() << std::endl;
     }
     
     return 0;

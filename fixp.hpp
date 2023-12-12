@@ -36,11 +36,26 @@ namespace fixp {
     concept is_integral = std::is_integral<T>::value;
 
     namespace internals {
+        template<typename T>
+        static constexpr T abs_cexpr(T x) {
+            if (x < static_cast<T>(0.0)) {
+                return -x;
+            } else {
+                return x;
+            }
+        }
+
+        template<const std::size_t FracBits>
         static constexpr float sqrt_cexpr(float x, float c, float prev) {
-            if (c == prev) {
+            double dc = static_cast<double>(c);
+            double dprev = static_cast<double>(prev);
+
+            constexpr double epsilon = 1.0 / static_cast<float>(1 << FracBits);
+            
+            if (abs_cexpr(dprev - dc) < epsilon) {
                 return c;
             } else {
-                return sqrt_cexpr(x, 0.5 * (c + x / c), c);
+                return sqrt_cexpr<FracBits>(x, 0.5 * (c + x / c), c);
             }
         }
     }
@@ -130,17 +145,27 @@ namespace fixp {
                 return f;
             }
 
+            inline fixed<FracBits, Storage, Intermediate>
+            operator+=(const fixed<FracBits, Storage, Intermediate>& other) {
+                *this = *this + other;
+                return *this;
+            }
+
+            inline fixed<FracBits, Storage, Intermediate>
+            operator-=(const fixed<FracBits, Storage, Intermediate>& other) {
+                *this = *this - other;
+                return *this;
+            }
+            
             inline fixed<FracBits, Storage, Intermediate>&
             operator*=(const fixed<FracBits, Storage, Intermediate>& other) {
-                const auto result = raw * other.raw;
-                raw = result.raw;
+                *this = *this * other;
                 return *this;
             }
 
             inline fixed<FracBits, Storage, Intermediate>&
             operator/=(const fixed<FracBits, Storage, Intermediate>& other) {
-                const auto result = raw / other;
-                raw = result.raw;
+                *this = *this / other;
                 return *this;
             }
 
@@ -169,12 +194,31 @@ namespace fixp {
                 return raw <= other.raw;
             }
 
-            inline float to_float() const {
+            constexpr float to_float() const {
                 return static_cast<float>(raw) / static_cast<float>(Scale);
             }
 
-            inline Storage to_raw() const {
+            constexpr Storage to_raw() const {
                 return raw;
+            }
+
+            // FIXME: No worky for negative values
+            std::string to_string() const {
+                using fixed_aux = fixed<FracBits, Intermediate, Intermediate>;
+
+                std::stringstream ss;
+                fixed_aux value = fixed_aux::from_raw(static_cast<Intermediate>(raw));
+                value -= value.truncate();
+
+                ss << truncate() << ".";
+
+                while (value.to_raw() & FracMask) {
+                    value *= 10;
+                    ss << value.truncate();
+                    value -= value.truncate();
+                }
+
+                return ss.str();
             }
 
             constexpr int truncate() const {
@@ -248,38 +292,68 @@ namespace fixp {
                 return sin_quadrant(remapped, quadrant);
             }
 
-            static constexpr fixed<FracBits, Storage, Intermediate> cos(const fixed<FracBits, Storage, Intermediate>& value) {
+            static constexpr fixed<FracBits, Storage, Intermediate>
+            cos(const fixed<FracBits, Storage, Intermediate>& value) {
                 const int quadrant = get_trig_quadrant(value);
                 const fixed remapped = remap_trig_parameter(value, quadrant);
                 return cos_quadrant(remapped, quadrant);
             }
 
-            template<const std::size_t Iterations=2>
-            static constexpr fixed<FracBits, Storage, Intermediate>
+            template<const std::size_t Iterations=2, const std::size_t LutLimit=1024>
+            static inline constexpr fixed<FracBits, Storage, Intermediate>
             sqrt(const fixed<FracBits, Storage, Intermediate>& value)
             {
                 using fixed_aux = fixed<FracBits, Intermediate, Intermediate>;
 
                 constexpr auto SQRT_LUT {[]() constexpr {
-                    constexpr std::size_t NElements = 1 << IntegralBits;
+                    constexpr std::size_t NElements = std::min(
+                        static_cast<std::size_t>(LutLimit),
+                        static_cast<std::size_t>(1 << IntegralBits));
+
                     std::array<fixed_aux, NElements> entries = { };
 
-                    for (std::size_t i = 0; i < NElements; i++) {
+                    // fudge it for values 0 < x < 1 otherwise we'll
+                    // get trapped at a 0 result
+                    entries[0] = fixed_aux(0.5f);
+
+                    for (std::size_t i = 1; i < NElements; i++) {
                         float x_float = static_cast<float>(i);
-                        entries[i] = fixed_aux(internals::sqrt_cexpr(x_float, x_float, 0.0f));
+                        entries[i] = fixed_aux(internals::sqrt_cexpr<FracBits>(x_float, x_float, 0.0f));
                     }
 
                     return entries;
                 }()};
 
-                constexpr fixed_aux one_half = 0.5f;
-                int truncated = value.truncate();
+                if (value.raw == 0) {
+                    return value;
+                }
 
-                fixed_aux x = SQRT_LUT[truncated];
-                const fixed_aux a = fixed_aux::from_raw(static_cast<Intermediate>(value.to_raw()));
+                std::size_t truncated = value.truncate();
+                fixed_aux x;
 
-                for (std::size_t i = 0; i < Iterations; i++) {
+                // only include bounds checking if the space of the
+                // integer part of our value is too large to fit in
+                // the LUT
+                if constexpr ((1 << IntegralBits) >= LutLimit) {
+                    if (truncated < SQRT_LUT.size()) {
+                        x = SQRT_LUT[truncated];
+                    } else {
+                        // Value's integral part lies outside the LUT,
+                        // so just use the value as an initial
+                        // guess. Probably good enough.
+                        x = fixed_aux::from_raw(value.to_raw());
+                    }
+                } else {
+                    x = SQRT_LUT[truncated];
+                }
+
+                const fixed_aux a = fixed_aux::from_raw(
+                    static_cast<Intermediate>(value.to_raw()));
+
+                for (std::size_t i = 0; x.to_raw() && i < Iterations; i++) {
+                    constexpr fixed_aux one_half = 0.5f;
                     fixed_aux inv_x = fixed_aux(1.0f) / x;
+
                     x = x - (x * x - a) * inv_x * one_half;
                 }
 
