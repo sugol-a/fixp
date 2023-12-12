@@ -1,9 +1,10 @@
 #include <cstdint>
 #include <iostream>
 #include <format>
+#include <cmath>
 #include "fixp.hpp"
 
-using fixed = fixp::fixed<12>;
+using fixed = fixp::fixed<14, std::int32_t, std::int64_t>;
 
 template <typename T>
 std::string
@@ -22,9 +23,12 @@ as_bin(T x)
 int
 main(int argc, char* argv[])
 {
-    constexpr fixed pi = std::numbers::pi_v<float>;
-    constexpr fixed half_pi = 0.5f * std::numbers::pi_v<float>;
-    std::cout << fixed::sin(half_pi).to_float() << std::endl;
+    std::cout << "x,fixed sqrt(x),real sqrt(x)" << std::endl;
+    for (float x = 0; x < 3.0f; x += 0.01) {
+        fixed fx_sqrt = fixed::sqrt<1024>(x);
 
+        std::cout << x << "," << fx_sqrt.to_float() << "," << std::sqrt(x) << std::endl;
+    }
+    
     return 0;
 }
