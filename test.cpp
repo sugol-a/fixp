@@ -3,81 +3,102 @@
 #include <iostream>
 #include <format>
 #include <cmath>
+#include <functional>
 
 #include "fixp.hpp"
 #define ANKERL_NANOBENCH_IMPLEMENT
 #include <nanobench.h>
 
 using namespace ankerl;
+using gentype = std::mt19937;
 
-using fixed = fixp::fixed<16, std::int32_t, std::int64_t>;
+namespace benches {
+    template<fixp::is_fixed T>
+    void fixed_sqrt(gentype& gen) {
+        std::uniform_real_distribution<float> rng(0.0, 100.0f);
+        T f = rng(gen);
+        T result = T::sqrt(f);
+
+        nanobench::doNotOptimizeAway(result);
+    }
+
+    void float_sqrt(gentype& gen) {
+        std::uniform_real_distribution<float> rng(0.0, 100.0f);
+        float f = rng(gen);
+        float result = std::sqrt(f);
+        nanobench::doNotOptimizeAway(result);
+    }
+
+    template<fixp::is_fixed T>
+    void fixed_sin(gentype& gen) {
+        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
+
+        T f = rng(gen);
+        T result = T::sin(f);
+        nanobench::doNotOptimizeAway(result);
+    }
+
+    void float_sin(gentype& gen) {
+        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
+
+        float f = rng(gen);
+        float result = std::sin(f);
+        nanobench::doNotOptimizeAway(result);
+    }
+
+    template<fixp::is_fixed T>
+    void fixed_cos(gentype& gen) {
+        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
+
+        T f = rng(gen);
+        T result = T::cos(f);
+        nanobench::doNotOptimizeAway(result);
+    }
+
+    void float_cos(gentype& gen) {
+        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
+
+        float f = rng(gen);
+        float result = std::cos(f);
+        nanobench::doNotOptimizeAway(result);
+    }
+}
+
+struct bench_case {
+    const char* name;
+    std::function<void(gentype&)> func;
+
+    bench_case(const char* name, std::function<void(gentype&)> func) {
+        this->name = name;
+        this->func = func;
+    }
+};
+
+using fixed_q16_16 = fixp::fixed<16, std::int32_t, std::int64_t>;
+using fixed_q4_12 = fixp::fixed<12, std::int16_t, std::int32_t>;
+using fixed_q8_8 = fixp::fixed<8, std::int16_t, std::int32_t>;
+
+static const bench_case cases[] = {
+    { "float sqrt", benches::float_sqrt },
+    { "fixed sqrt Q16.16", benches::fixed_sqrt<fixed_q16_16> },
+    { "fixed sqrt Q4.12", benches::fixed_sqrt<fixed_q4_12> },
+    { "fixed sqrt Q8.8", benches::fixed_sqrt<fixed_q8_8> },
+    { "float sin", benches::float_sin },
+    { "fixed sin Q16.16", benches::fixed_sin<fixed_q16_16> },
+    { "fixed sin Q4.12", benches::fixed_sin<fixed_q4_12> },
+    { "fixed sin Q8.8", benches::fixed_sin<fixed_q8_8> },
+};
 
 int main(int argc, char *argv[])
 {
-    nanobench::Bench().run("fixed sqrt", [] {
-        fixed f = rand();
-        fixed result = fixed::sqrt(f);
+    std::random_device rd;
+    std::mt19937 gen(rd());
 
-        nanobench::doNotOptimizeAway(result);
-    });
+    for (const auto& bc : cases) {
+        nanobench::Bench().run(bc.name, [&]() {
+            bc.func(gen);
+        });
+    }
 
     return 0;
 }
-
-
-// #define PICOBENCH_IMPLEMENT_WITH_MAIN
-// #include <picobench/picobench.hpp>
-
-// #include "fixp.hpp"
-
-// using fixed = fixp::fixed<8, std::int32_t, std::int64_t>;
-
-// template <typename T>
-// std::string
-// as_bin(T x)
-// {
-//     std::string result;
-//     constexpr std::size_t n_bits = sizeof(T) * 8;
-
-//     for (std::size_t i = 0; i < n_bits; i++) {
-//         result += (x & (1 << (n_bits - i - 1))) ? '1' : '0';
-//     }
-
-//     return result;
-// }
-
-// void
-// bench_fixed_sqrt(picobench::state& s)
-// {
-//     for (const auto& _ : s) {
-//         fixed f = rand();
-//         fixed result = fixed::from_raw(fixed::sqrt<3>(f).to_raw());
-
-//         s.set_result(result.to_raw());
-//     }
-// }
-// PICOBENCH(bench_fixed_sqrt).samples(1000);
-
-// void
-// bench_float_sqrt(picobench::state& s)
-// {
-//     for (const auto& _ : s) {
-//         float x = rand();
-//         float result = std::sqrt(x);
-
-//         s.set_result(result);
-//     }
-// }
-// PICOBENCH(bench_float_sqrt).samples(1000);
-
-// int
-// main(int argc, char* argv[])
-// {
-//     std::cout << "x,fixed sq(x),real sq(x)" << std::endl;
-
-//     for (fixed x = 0.0f; x < 64.0f; x += 0.01f) {
-//         std::cout << x.to_string() << "," << fixed::sqrt<32>(x).to_string() << std::endl;
-//     }
-
-//     return 0;
-// }

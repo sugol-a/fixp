@@ -50,7 +50,7 @@ namespace fixp {
             double dc = static_cast<double>(c);
             double dprev = static_cast<double>(prev);
 
-            constexpr double epsilon = 1.0 / static_cast<float>(1 << FracBits);
+            constexpr double epsilon = 1.0 / static_cast<double>(1 << FracBits);
             
             if (abs_cexpr(dprev - dc) < epsilon) {
                 return c;
@@ -74,6 +74,67 @@ namespace fixp {
 
         private:
             Storage raw;
+
+        private:
+            static constexpr fixed<FracBits, Storage, Intermediate>
+            remap_trig_parameter(const fixed<FracBits, Storage, Intermediate>& value, int quadrant) {
+                constexpr fixed pi            = std::numbers::pi_v<float>;
+                constexpr fixed two_pi        = 2.0f * std::numbers::pi_v<float>;
+
+                fixed remapped;
+                switch (quadrant) {
+                    case 0:
+                        remapped = value;
+                        break;
+
+                    case 1:
+                        remapped = pi - value;
+                        break;
+
+                    case 2:
+                        remapped = value - pi;
+                        break;
+
+                    case 3:
+                        remapped = two_pi - value;
+                        break;
+                }
+
+                return fixed(static_cast<Storage>(remapped.raw));
+            }
+
+            static constexpr Storage get_trig_quadrant(const fixed<FracBits, Storage, Intermediate>& value) {
+                constexpr fixed inverse_half_pi = 2.0f / std::numbers::pi_v<float>;
+                const Storage quadrant = (value * inverse_half_pi).truncate();
+
+                return quadrant & 0x03;
+            }
+
+            static constexpr fixed
+            sin_quadrant(const fixed& value, Storage quadrant) {
+                // We use a Taylor expansion using coefficients stolen from here:
+                // http://www.sahraid.com/FFT/FixedPointArithmatic
+                constexpr fixed a1 = -0.16605f;
+                constexpr fixed a2 = 0.00761f;
+
+                const fixed result = value * (fixed(1.0f) + value * (a1 + value * value * a2));
+                const fixed sign = fixed(static_cast<float>(quadrant < 2)) - fixed(static_cast<float>(quadrant >= 2));
+
+                return sign * result;
+            }
+
+            static constexpr fixed
+            cos_quadrant(const fixed& value, Storage quadrant) {
+                constexpr fixed a1 = -0.49670f;
+                constexpr fixed a2 = 0.03705f;
+
+                const bool is_positive = quadrant == 0 || quadrant == 3;
+                const fixed sign = is_positive - !is_positive;
+
+                const fixed result = fixed(1.0f) + value * (value * (a1 + value * value * a2));
+
+                return sign * result;
+            }
 
         public:
             constexpr fixed() { raw = 0; }
@@ -225,83 +286,23 @@ namespace fixp {
                 return raw >> FracBits;
             }
 
-            static constexpr fixed<FracBits, Storage, Intermediate>
-            remap_trig_parameter(const fixed<FracBits, Storage, Intermediate>& value, int quadrant) {
-                constexpr fixed pi            = std::numbers::pi_v<float>;
-                constexpr fixed two_pi        = 2.0f * std::numbers::pi_v<float>;
-
-                fixed remapped;
-                switch (quadrant) {
-                    case 0:
-                        remapped = value;
-                        break;
-
-                    case 1:
-                        remapped = pi - value;
-                        break;
-
-                    case 2:
-                        remapped = value - pi;
-                        break;
-
-                    case 3:
-                        remapped = two_pi - value;
-                        break;
-                }
-
-                return fixed(static_cast<Storage>(remapped.raw));
-            }
-
-            static constexpr Storage get_trig_quadrant(const fixed<FracBits, Storage, Intermediate>& value) {
-                constexpr fixed inverse_half_pi = 2.0f / std::numbers::pi_v<float>;
-                const Storage quadrant = (value * inverse_half_pi).truncate();
-
-                return quadrant & 0x03;
-            }
-
-            static constexpr fixed<FracBits, Storage, Intermediate>
-            sin_quadrant(const fixed<FracBits, Storage, Intermediate>& value, Storage quadrant) {
-                // We use a Taylor expansion using coefficients stolen from here:
-                // http://www.sahraid.com/FFT/FixedPointArithmatic
-                constexpr fixed a1 = -0.16605f;
-                constexpr fixed a2 = 0.00761f;
-
-                const fixed result = value * (fixed(1.0f) + value * (a1 + value * value * a2));
-                const fixed sign = fixed(static_cast<float>(quadrant < 2)) - fixed(static_cast<float>(quadrant >= 2));
-
-                return sign * result;
-            }
-
-            static constexpr fixed<FracBits, Storage, Intermediate>
-            cos_quadrant(const fixed<FracBits, Storage, Intermediate>& value, Storage quadrant) {
-                constexpr fixed a1 = -0.49670f;
-                constexpr fixed a2 = 0.03705f;
-
-                const bool is_positive = quadrant == 0 || quadrant == 3;
-                const fixed sign = is_positive - !is_positive;
-
-                const fixed result = fixed(1.0f) + value * (value * (a1 + value * value * a2));
-
-                return sign * result;
-            }
-
-            static constexpr fixed<FracBits, Storage, Intermediate>
-            sin(const fixed<FracBits, Storage, Intermediate>& value) {
+            static constexpr fixed
+            sin(const fixed& value) {
                 const Storage quadrant = get_trig_quadrant(value);
                 const fixed remapped = remap_trig_parameter(value, quadrant);
                 return sin_quadrant(remapped, quadrant);
             }
 
-            static constexpr fixed<FracBits, Storage, Intermediate>
-            cos(const fixed<FracBits, Storage, Intermediate>& value) {
+            static constexpr fixed
+            cos(const fixed& value) {
                 const int quadrant = get_trig_quadrant(value);
                 const fixed remapped = remap_trig_parameter(value, quadrant);
                 return cos_quadrant(remapped, quadrant);
             }
 
             template<const std::size_t Iterations=2, const std::size_t LutLimit=1024>
-            static inline constexpr fixed<FracBits, Storage, Intermediate>
-            sqrt(const fixed<FracBits, Storage, Intermediate>& value)
+            static inline constexpr fixed
+            sqrt(const fixed& value)
             {
                 using fixed_aux = fixed<FracBits, Intermediate, Intermediate>;
 
@@ -355,5 +356,10 @@ namespace fixp {
 
                 return fixed::from_raw(static_cast<Storage>(x.to_raw()));
             }
+    };
+
+    template<typename T>
+    concept is_fixed = requires(T a) {
+        { fixed(a) } -> std::same_as<T>;
     };
 }

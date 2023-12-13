@@ -1,5 +1,14 @@
 project('fixp', 'cpp', default_options: ['cpp_std=c++23'])
 
-include = include_directories('thirdparty/nanobench/src/include/')
+add_global_arguments('-march=haswell', language: 'cpp')
 
-executable('fixp-test', sources: ['test.cpp'], include_directories: include)
+include = include_directories('thirdparty/nanobench/src/include/')
+sources = [
+  'test.cpp'
+]
+
+executable(
+  'fixp-test',
+  sources: sources,
+  include_directories: include
+)
