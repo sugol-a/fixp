@@ -324,10 +324,6 @@ namespace fixp {
                     return entries;
                 }()};
 
-                if (value.raw == 0) {
-                    return value;
-                }
-
                 std::size_t truncated = value.truncate();
                 fixed_aux x;
 
@@ -354,7 +350,7 @@ namespace fixp {
                     constexpr fixed_aux one_half = 0.5f;
                     fixed_aux inv_x = fixed_aux(1.0f) / x;
 
-                    x = x - (x * x - a) * inv_x * one_half;
+                    x = (x * x + a) * inv_x * one_half;
                 }
 
                 return fixed::from_raw(static_cast<Storage>(x.to_raw()));
