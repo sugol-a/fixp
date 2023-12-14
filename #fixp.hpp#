@@ -301,7 +301,7 @@ namespace fixp {
                     remapped *= -1;
                 }
                 
-                return fixed(is_negative ? -1.0f : 1.0f) * sin_quadrant(remapped, quadrant);
+                return fixed * sin_quadrant(remapped, quadrant);
             }
 
             static constexpr fixed

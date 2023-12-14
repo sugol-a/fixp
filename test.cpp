@@ -67,6 +67,7 @@ struct bench_case {
 };
 
 using fixed_q16_16 = fixp::fixed<16, std::int32_t, std::int64_t>;
+using fixed_q24_8 = fixp::fixed<24, std::int32_t, std::int64_t>;
 using fixed_q4_12 = fixp::fixed<12, std::int16_t, std::int32_t>;
 using fixed_q8_8 = fixp::fixed<8, std::int16_t, std::int32_t>;
 
@@ -83,14 +84,14 @@ static const bench_case cases[] = {
 
 int main(int argc, char *argv[])
 {
-    for (float f = 0; f < std::numbers::pi_v<float> * 2.0f; f += 0.1) {
-        fixed_q4_12 fx = f;
-        std::cout << f << ", " << fixed_q4_12::sin(fx).to_float() << std::endl;
+    for (float f = -2.0f * std::numbers::pi_v<float>; f < std::numbers::pi_v<float> * 2.0f; f += 0.01) {
+        fixed_q16_16 fx = f;
+        std::cout << f << ", " << fixed_q16_16::sin(fx).to_float() << std::endl;
     }
     
-    for (const auto& bc : cases) {
-        nanobench::Bench().run(bc.name, bc.func);
-    }
+    // for (const auto& bc : cases) {
+    //     nanobench::Bench().run(bc.name, bc.func);
+    // }
 
     return 0;
 }
