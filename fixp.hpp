@@ -110,14 +110,17 @@ namespace fixp {
                 return quadrant & 0x03;
             }
 
-            static constexpr fixed
-            sin_quadrant(const fixed& value, Storage quadrant) {
+            static constexpr fixed<FracBits, Storage, Intermediate>
+            sin_quadrant(const fixed<FracBits, Storage, Intermediate>& value, Storage quadrant) {
                 // We use a Taylor expansion using coefficients stolen from here:
                 // http://www.sahraid.com/FFT/FixedPointArithmatic
                 constexpr fixed a1 = -0.16605f;
                 constexpr fixed a2 = 0.00761f;
 
-                const fixed result = value * (fixed(1.0f) + value * (a1 + value * value * a2));
+                const fixed x_pow2 = value * value;
+                const fixed x_pow4 = x_pow2 * x_pow2;
+
+                const fixed result = value * (fixed(1.0f) + (a1 * x_pow2) + (a2 * x_pow4));
                 const fixed sign = fixed(static_cast<float>(quadrant < 2)) - fixed(static_cast<float>(quadrant >= 2));
 
                 return sign * result;
@@ -288,7 +291,7 @@ namespace fixp {
 
             static constexpr fixed
             sin(const fixed& value) {
-                const Storage quadrant = get_trig_quadrant(value);
+                const int quadrant = get_trig_quadrant(value);
                 const fixed remapped = remap_trig_parameter(value, quadrant);
                 return sin_quadrant(remapped, quadrant);
             }

@@ -10,55 +10,47 @@
 #include <nanobench.h>
 
 using namespace ankerl;
-using gentype = std::mt19937;
+
+static nanobench::Rng rng;
+static constexpr float two_pi = 2.0f * std::numbers::pi_v<float>;
 
 namespace benches {
     template<fixp::is_fixed T>
-    void fixed_sqrt(gentype& gen) {
-        std::uniform_real_distribution<float> rng(0.0, 100.0f);
-        T f = rng(gen);
+    void fixed_sqrt() {
+        T f = rng.uniform01() * 100.0f;
         T result = T::sqrt(f);
 
         nanobench::doNotOptimizeAway(result);
     }
 
-    void float_sqrt(gentype& gen) {
-        std::uniform_real_distribution<float> rng(0.0, 100.0f);
-        float f = rng(gen);
+    void float_sqrt() {
+        float f = rng.uniform01() * 100.0f;
         float result = std::sqrt(f);
         nanobench::doNotOptimizeAway(result);
     }
 
     template<fixp::is_fixed T>
-    void fixed_sin(gentype& gen) {
-        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
-
-        T f = rng(gen);
+    void fixed_sin() {
+        T f = rng.uniform01() * two_pi;
         T result = T::sin(f);
         nanobench::doNotOptimizeAway(result);
     }
 
-    void float_sin(gentype& gen) {
-        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
-
-        float f = rng(gen);
+    void float_sin() {
+        float f = rng.uniform01() * two_pi;
         float result = std::sin(f);
         nanobench::doNotOptimizeAway(result);
     }
 
     template<fixp::is_fixed T>
-    void fixed_cos(gentype& gen) {
-        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
-
-        T f = rng(gen);
+    void fixed_cos() {
+        T f = rng.uniform01() * two_pi;
         T result = T::cos(f);
         nanobench::doNotOptimizeAway(result);
     }
 
-    void float_cos(gentype& gen) {
-        std::uniform_real_distribution<float> rng(0.0, 2.0f * std::numbers::pi);
-
-        float f = rng(gen);
+    void float_cos() {
+        float f = rng.uniform01() * two_pi;
         float result = std::cos(f);
         nanobench::doNotOptimizeAway(result);
     }
@@ -66,9 +58,9 @@ namespace benches {
 
 struct bench_case {
     const char* name;
-    std::function<void(gentype&)> func;
+    std::function<void(void)> func;
 
-    bench_case(const char* name, std::function<void(gentype&)> func) {
+    bench_case(const char* name, std::function<void(void)> func) {
         this->name = name;
         this->func = func;
     }
@@ -91,13 +83,13 @@ static const bench_case cases[] = {
 
 int main(int argc, char *argv[])
 {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
+    for (float f = 0; f < std::numbers::pi_v<float> * 2.0f; f += 0.1) {
+        fixed_q4_12 fx = f;
+        std::cout << f << ", " << fixed_q4_12::sin(fx).to_float() << std::endl;
+    }
+    
     for (const auto& bc : cases) {
-        nanobench::Bench().run(bc.name, [&]() {
-            bc.func(gen);
-        });
+        nanobench::Bench().run(bc.name, bc.func);
     }
 
     return 0;
