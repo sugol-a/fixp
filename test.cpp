@@ -1,3 +1,4 @@
+#include <bitset>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -84,11 +85,20 @@ static const bench_case cases[] = {
 
 int main(int argc, char *argv[])
 {
-    for (float f = -2.0f * std::numbers::pi_v<float>; f < std::numbers::pi_v<float> * 2.0f; f += 0.01) {
-        fixed_q16_16 fx = f;
-        std::cout << f << ", " << fixed_q16_16::sin(fx).to_float() << std::endl;
-    }
-    
+    using fixed = fixed_q4_12;
+    fixed f = 3.0f;
+
+    std::cout << f.to_float() << "\n"
+              << (-f).to_float() << "\n";
+
+    std::cout << std::bitset<16>(f.to_raw()) << "\n"
+              << std::bitset<16>((-f).to_raw()) << "\n";
+
+    // for (float f = -2.0f * std::numbers::pi_v<float>; f < std::numbers::pi_v<float> * 2.0f; f += 0.01) {
+    //     fixed_q16_16 fx = f;
+    //     std::cout << f << ", " << fixed_q16_16::sin(fx).to_float() << std::endl;
+    // }
+
     // for (const auto& bc : cases) {
     //     nanobench::Bench().run(bc.name, bc.func);
     // }

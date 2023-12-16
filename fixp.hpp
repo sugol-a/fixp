@@ -28,6 +28,7 @@
 #include <type_traits>
 #include <cstdint>
 #include <numbers>
+#include <iostream>
 
 namespace fixp {
     
@@ -185,7 +186,7 @@ namespace fixp {
             constexpr fixed<FracBits, Storage, Intermediate>
             operator-() const {
                 fixed f;
-                f.raw = -f.raw;
+                f.raw *= -1;
 
                 return f;
             }
