@@ -186,7 +186,7 @@ namespace fixp {
             constexpr fixed<FracBits, Storage, Intermediate>
             operator-() const {
                 fixed f;
-                f.raw *= -1;
+                f.raw = raw * -1;
 
                 return f;
             }
@@ -294,15 +294,8 @@ namespace fixp {
             static constexpr fixed
             sin(const fixed& value) {
                 const int quadrant = get_trig_quadrant(value);
-
-                fixed remapped = remap_trig_parameter(value, quadrant);
-                bool is_negative = value < 0;
-
-                if (is_negative) {
-                    remapped *= -1;
-                }
-                
-                return fixed(is_negative ? -1.0f : 1.0f) * sin_quadrant(remapped, quadrant);
+                const fixed remapped = remap_trig_parameter(value, quadrant);
+                return sin_quadrant(remapped, quadrant);
             }
 
             static constexpr fixed
