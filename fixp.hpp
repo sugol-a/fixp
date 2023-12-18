@@ -154,7 +154,7 @@ namespace fixp {
             }
 
             static constexpr fixed<FracBits, Storage, Intermediate>
-            from_raw(Storage s) {
+            from_raw(Storage s) noexcept {
                 fixed f;
                 f.raw = s;
 
@@ -162,13 +162,13 @@ namespace fixp {
             }
 
             inline const fixed<FracBits, Storage, Intermediate>&
-            operator=(float value) {
+            operator=(float value) noexcept {
                 raw = static_cast<Storage>(value * Scale);
                 return *this;
             }
 
             constexpr fixed<FracBits, Storage, Intermediate>
-            operator+(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator+(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 fixed f;
                 f.raw = raw + other.raw;
 
@@ -176,7 +176,7 @@ namespace fixp {
             }
 
             constexpr fixed<FracBits, Storage, Intermediate>
-            operator-(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator-(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 fixed f;
                 f.raw = raw - other.raw;
 
@@ -184,7 +184,7 @@ namespace fixp {
             }
 
             constexpr fixed<FracBits, Storage, Intermediate>
-            operator-() const {
+            operator-() const noexcept {
                 fixed f;
                 f.raw = raw * -1;
 
@@ -192,7 +192,7 @@ namespace fixp {
             }
 
             constexpr fixed<FracBits, Storage, Intermediate>
-            operator*(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator*(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 Intermediate im = static_cast<Intermediate>(raw) * static_cast<Intermediate>(other.raw);
 
                 fixed f;
@@ -202,7 +202,7 @@ namespace fixp {
             }
 
             constexpr fixed<FracBits, Storage, Intermediate>
-            operator/(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator/(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 Intermediate im = (static_cast<Intermediate>(raw) << static_cast<Intermediate>(FracBits)) / static_cast<Intermediate>(other.raw);
 
                 fixed f;
@@ -212,64 +212,63 @@ namespace fixp {
             }
 
             inline fixed<FracBits, Storage, Intermediate>
-            operator+=(const fixed<FracBits, Storage, Intermediate>& other) {
+            operator+=(const fixed<FracBits, Storage, Intermediate>& other) noexcept {
                 *this = *this + other;
                 return *this;
             }
 
             inline fixed<FracBits, Storage, Intermediate>
-            operator-=(const fixed<FracBits, Storage, Intermediate>& other) {
+            operator-=(const fixed<FracBits, Storage, Intermediate>& other) noexcept {
                 *this = *this - other;
                 return *this;
             }
             
             inline fixed<FracBits, Storage, Intermediate>&
-            operator*=(const fixed<FracBits, Storage, Intermediate>& other) {
+            operator*=(const fixed<FracBits, Storage, Intermediate>& other) noexcept {
                 *this = *this * other;
                 return *this;
             }
 
             inline fixed<FracBits, Storage, Intermediate>&
-            operator/=(const fixed<FracBits, Storage, Intermediate>& other) {
+            operator/=(const fixed<FracBits, Storage, Intermediate>& other) noexcept {
                 *this = *this / other;
                 return *this;
             }
 
             constexpr bool
-            operator>(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator>(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 return raw > other.raw;
             }
 
             constexpr bool
-            operator<(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator<(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 return raw < other.raw;
             }
 
             constexpr bool
-            operator==(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator==(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 return raw == other.raw;
             }
 
             constexpr bool
-            operator>=(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator>=(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 return raw >= other.raw;
             }
 
             constexpr bool
-            operator<=(const fixed<FracBits, Storage, Intermediate>& other) const {
+            operator<=(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
                 return raw <= other.raw;
             }
 
-            constexpr float to_float() const {
+            constexpr float to_float() const noexcept {
                 return static_cast<float>(raw) / static_cast<float>(Scale);
             }
 
-            constexpr Storage to_raw() const {
+            constexpr Storage to_raw() const noexcept {
                 return raw;
             }
 
-            // FIXME: No worky for negative values
-            std::string to_string() const {
+            std::string to_string() const noexcept {
                 using fixed_aux = fixed<FracBits, Intermediate, Intermediate>;
 
                 std::stringstream ss;
@@ -287,12 +286,12 @@ namespace fixp {
                 return ss.str();
             }
 
-            constexpr int truncate() const {
-                return raw >> FracBits;
+            constexpr int truncate() const noexcept {
+                return raw / Scale;
             }
 
             static constexpr fixed
-            sin(const fixed& value) {
+            sin(const fixed& value) noexcept {
                 const bool is_negative = value < 0;
                 const fixed coeff = fixed(is_negative ? -1.0f : 1.0f);
 
@@ -303,10 +302,7 @@ namespace fixp {
             }
 
             static constexpr fixed
-            cos(const fixed& value) {
-                const int quadrant = get_trig_quadrant(value);
-                const fixed remapped = remap_trig_parameter(value, quadrant);
-
+            cos(const fixed& value) noexcept {
                 const bool is_negative = value < 0;
                 const fixed coeff = fixed(is_negative ? -1.0f : 1.0f);
 
@@ -315,8 +311,7 @@ namespace fixp {
 
             template<const std::size_t Iterations=2, const std::size_t LutLimit=1024>
             static inline constexpr fixed
-            sqrt(const fixed& value)
-            {
+            sqrt(const fixed& value) noexcept {
                 using fixed_aux = fixed<FracBits, Intermediate, Intermediate>;
 
                 static constexpr auto SQRT_LUT {[]() constexpr {
