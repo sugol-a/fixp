@@ -1,3 +1,6 @@
-[submodule "thirdparty/nanobench"]
-	path = subprojects/nanobench
+[submodule "third_party/nanobench"]
+	path = third_party/nanobench
 	url = https://github.com/martinus/nanobench
+[submodule "third_party/sciplot"]
+	path = third_party/sciplot
+	url = https://github.com/sciplot/sciplot
