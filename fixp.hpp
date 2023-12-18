@@ -211,6 +211,14 @@ namespace fixp {
                 return f;
             }
 
+            constexpr fixed<FracBits, Storage, Intermediate>
+            operator%(const fixed<FracBits, Storage, Intermediate>& other) const noexcept {
+                fixed f;
+                f.raw = raw % other.raw;
+
+                return f;
+            }
+
             inline fixed<FracBits, Storage, Intermediate>
             operator+=(const fixed<FracBits, Storage, Intermediate>& other) noexcept {
                 *this = *this + other;
@@ -232,6 +240,12 @@ namespace fixp {
             inline fixed<FracBits, Storage, Intermediate>&
             operator/=(const fixed<FracBits, Storage, Intermediate>& other) noexcept {
                 *this = *this / other;
+                return *this;
+            }
+
+            inline fixed<FracBits, Storage, Intermediate>&
+            operator%=(const fixed<FracBits, Storage, Intermediate>& other) noexcept {
+                *this = *this % other;
                 return *this;
             }
 
