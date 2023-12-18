@@ -2,7 +2,7 @@ project('fixp', 'cpp', default_options: ['cpp_std=c++23'])
 
 #add_global_arguments('-march=haswell', language: 'cpp')
 
-nanobench = include_directories('thirdparty/nanobench/src/include/')
+nanobench = include_directories('subprojects/nanobench/src/include/')
 sources_bench = [
   'bench.cpp'
 ]
