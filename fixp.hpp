@@ -19,8 +19,6 @@
  * THE SOFTWARE.
  */
 
-#include <cmath>
-#include <concepts>
 #include <cstdlib>
 #include <sstream>
 #include <string>
@@ -28,17 +26,15 @@
 #include <type_traits>
 #include <cstdint>
 #include <numbers>
-#include <iostream>
 
 namespace fixp {
-    
     template<typename T>
     concept is_integral = std::is_integral<T>::value;
 
     namespace internals {
         template<typename T>
         static constexpr T abs_cexpr(T x) {
-            if (x < static_cast<T>(0.0)) {
+            if (x < static_cast<T>(0)) {
                 return -x;
             } else {
                 return x;
@@ -107,9 +103,13 @@ namespace fixp {
 
             static constexpr Storage get_trig_quadrant(const fixed<FracBits, Storage, Intermediate>& value) {
                 constexpr fixed inverse_half_pi = 2.0f / std::numbers::pi_v<float>;
-                const Storage quadrant = (value * inverse_half_pi).truncate();
+                Storage quadrant = (value * inverse_half_pi).truncate() % 4;
 
-                return quadrant & 0x03;
+                if (value < 0) {
+                    quadrant = 3 - quadrant;
+                }
+
+                return quadrant % 4;
             }
 
             static constexpr fixed<FracBits, Storage, Intermediate>
@@ -293,16 +293,24 @@ namespace fixp {
 
             static constexpr fixed
             sin(const fixed& value) {
+                const bool is_negative = value < 0;
+                const fixed coeff = fixed(is_negative ? -1.0f : 1.0f);
+
                 const int quadrant = get_trig_quadrant(value);
-                const fixed remapped = remap_trig_parameter(value, quadrant);
-                return sin_quadrant(remapped, quadrant);
+                const fixed remapped = remap_trig_parameter(coeff * value, quadrant);
+
+                return coeff * sin_quadrant(remapped, quadrant);
             }
 
             static constexpr fixed
             cos(const fixed& value) {
                 const int quadrant = get_trig_quadrant(value);
                 const fixed remapped = remap_trig_parameter(value, quadrant);
-                return cos_quadrant(remapped, quadrant);
+
+                const bool is_negative = value < 0;
+                const fixed coeff = fixed(is_negative ? -1.0f : 1.0f);
+
+                return cos_quadrant(coeff * remapped, quadrant);
             }
 
             template<const std::size_t Iterations=2, const std::size_t LutLimit=1024>
@@ -311,7 +319,7 @@ namespace fixp {
             {
                 using fixed_aux = fixed<FracBits, Intermediate, Intermediate>;
 
-                constexpr auto SQRT_LUT {[]() constexpr {
+                static constexpr auto SQRT_LUT {[]() constexpr {
                     constexpr std::size_t NElements = std::min(
                         static_cast<std::size_t>(LutLimit),
                         static_cast<std::size_t>(1 << IntegralBits));
