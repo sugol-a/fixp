@@ -32,26 +32,26 @@ namespace benches {
 
     template<fixp::is_fixed T>
     void fixed_sin() {
-        T f = rng.uniform01() * two_pi;
+        T f = 2.0f * (rng.uniform01() - 0.5f) * two_pi; // [-2pi,2pi]
         T result = T::sin(f);
         nanobench::doNotOptimizeAway(result);
     }
 
     void float_sin() {
-        float f = rng.uniform01() * two_pi;
+        float f = 2.0f * (rng.uniform01() - 0.5f) * two_pi;
         float result = std::sin(f);
         nanobench::doNotOptimizeAway(result);
     }
 
     template<fixp::is_fixed T>
     void fixed_cos() {
-        T f = rng.uniform01() * two_pi;
+        T f = 2.0f * (rng.uniform01() - 0.5f) * two_pi;
         T result = T::cos(f);
         nanobench::doNotOptimizeAway(result);
     }
 
     void float_cos() {
-        float f = rng.uniform01() * two_pi;
+        float f = 2.0f * (rng.uniform01() - 0.5f) * two_pi;
         float result = std::cos(f);
         nanobench::doNotOptimizeAway(result);
     }
@@ -73,18 +73,18 @@ using fixed_q4_12 = fixp::fixed<12, std::int16_t, std::int32_t>;
 using fixed_q8_8 = fixp::fixed<8, std::int16_t, std::int32_t>;
 
 static const bench_case cases[] = {
-    { "float sqrt", benches::float_sqrt },
-    { "fixed sqrt Q16.16", benches::fixed_sqrt<fixed_q16_16> },
-    { "fixed sqrt Q4.12", benches::fixed_sqrt<fixed_q4_12> },
-    { "fixed sqrt Q8.8", benches::fixed_sqrt<fixed_q8_8> },
-    { "float sin", benches::float_sin },
-    { "fixed sin Q16.16", benches::fixed_sin<fixed_q16_16> },
-    { "fixed sin Q4.12", benches::fixed_sin<fixed_q4_12> },
-    { "fixed sin Q8.8", benches::fixed_sin<fixed_q8_8> },
-    { "float cos", benches::float_cos },
-    { "fixed cos Q16.16", benches::fixed_cos<fixed_q16_16> },
-    { "fixed cos Q4.12", benches::fixed_cos<fixed_q4_12> },
-    { "fixed cos Q8.8", benches::fixed_cos<fixed_q8_8> },
+    { "float sqrt"             , benches::float_sqrt },
+    { "fixed sqrt Q16.16"      , benches::fixed_sqrt<fixed_q16_16> },
+    { "fixed sqrt Q4.12"       , benches::fixed_sqrt<fixed_q4_12> },
+    { "fixed sqrt Q8.8"        , benches::fixed_sqrt<fixed_q8_8> },
+    { "float sin"              , benches::float_sin },
+    { "fixed sin Q16.16"       , benches::fixed_sin<fixed_q16_16> },
+    { "fixed sin Q4.12"        , benches::fixed_sin<fixed_q4_12> },
+    { "fixed sin Q8.8"         , benches::fixed_sin<fixed_q8_8> },
+    { "float cos"              , benches::float_cos },
+    { "fixed cos Q16.16"       , benches::fixed_cos<fixed_q16_16> },
+    { "fixed cos Q4.12"        , benches::fixed_cos<fixed_q4_12> },
+    { "fixed cos Q8.8"         , benches::fixed_cos<fixed_q8_8> }
 };
 
 int main(int argc, char *argv[])
