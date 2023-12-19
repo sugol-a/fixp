@@ -285,14 +285,41 @@ namespace fixp {
 
                 std::stringstream ss;
                 fixed_aux value = fixed_aux::from_raw(static_cast<Intermediate>(raw));
+
+                // integral part
+                ss << value.truncate();
                 value -= value.truncate();
 
-                ss << truncate() << ".";
+                if (!(value.to_raw() & FracMask)) {
+                    // nothing in the fractional part; early exit
+                    return ss.str();
+                }
 
-                while (value.to_raw() & FracMask) {
+                static constexpr std::size_t max_digits = ([]() constexpr {
+                    std::size_t log = 0;
+                    std::size_t n = 1 << (FracBits - 1);
+
+                    while (n) {
+                        n /= 10;
+                        log++;
+                    }
+
+                    return log + 1;
+                })();
+
+                ss << ".";
+
+                if (value < 0) {
+                    value *= -1;
+                }
+
+                std::size_t i = 0;
+                while ((value.to_raw() & FracMask) && i < max_digits) {
                     value *= 10;
-                    ss << value.truncate();
+                    ss << (value.truncate() % 10);
                     value -= value.truncate();
+
+                    i++;
                 }
 
                 return ss.str();
