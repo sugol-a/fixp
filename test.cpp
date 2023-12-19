@@ -62,18 +62,36 @@ namespace graphs {
         plot.drawCurve(x_values, float_sqrt).label("Float cos(x)");
         plot.drawCurve(x_values, fixed_sqrt).label("Fixed cos(x)");
     }
+
+    template<fixp::is_fixed T>
+    void fixed_trig_quadrant(sciplot::Plot2D& plot) {
+        sciplot::Vec x_values = sciplot::linspace(-2.0f * std::numbers::pi, 2.0f * std::numbers::pi, 200);
+        sciplot::Vec quadrants = x_values.apply([](double x) { return static_cast<double>(T::get_trig_quadrant(x)); });
+
+        plot.xlabel("x");
+        plot.ylabel("Trig Quadrant");
+
+        plot.xrange(-2.0f * std::numbers::pi, 2.0f * std::numbers::pi);
+        plot.yrange(-5.0, 5.0);
+        plot.legend();
+
+        plot.drawCurve(x_values, quadrants).label("Quadrant");
+    }
 }
 
 static const std::pair<std::string, std::function<void(sciplot::Plot2D&)> > GRAPH_FUNCS[] = {
-    { "sin_q16.16", graphs::fixed_sin<fixed_q16_16> },
-    { "sin_q4.12", graphs::fixed_sin<fixed_q4_12> },
-    { "sin_q8.8", graphs::fixed_sin<fixed_q8_8> },
-    { "cos_q16.16", graphs::fixed_cos<fixed_q16_16> },
-    { "cos_q4.12", graphs::fixed_cos<fixed_q4_12> },
-    { "cos_q8.8", graphs::fixed_cos<fixed_q8_8> },
-    { "sqrt_q16.16", graphs::fixed_sqrt<fixed_q16_16> },
-    { "sqrt_q4.12", graphs::fixed_sqrt<fixed_q4_12> },
-    { "sqrt_q8.8", graphs::fixed_sqrt<fixed_q8_8> },
+    { "sin_q16.16"  , graphs::fixed_sin<fixed_q16_16> },
+    { "sin_q4.12"   , graphs::fixed_sin<fixed_q4_12> },
+    { "sin_q8.8"    , graphs::fixed_sin<fixed_q8_8> },
+    { "cos_q16.16"  , graphs::fixed_cos<fixed_q16_16> },
+    { "cos_q4.12"   , graphs::fixed_cos<fixed_q4_12> },
+    { "cos_q8.8"    , graphs::fixed_cos<fixed_q8_8> },
+    { "sqrt_q16.16" , graphs::fixed_sqrt<fixed_q16_16> },
+    { "sqrt_q4.12"  , graphs::fixed_sqrt<fixed_q4_12> },
+    { "sqrt_q8.8"   , graphs::fixed_sqrt<fixed_q8_8> },
+    { "quad_q16.16" , graphs::fixed_trig_quadrant<fixed_q16_16> },
+    { "quad_q4.12"  , graphs::fixed_trig_quadrant<fixed_q4_12> },
+    { "quad_q8.8"   , graphs::fixed_trig_quadrant<fixed_q8_8> },
 };
 
 static constexpr std::size_t N_GRAPH_FUNCS = sizeof(GRAPH_FUNCS) / sizeof(GRAPH_FUNCS[0]);
@@ -117,6 +135,25 @@ plot_graph(int argc, char** argv)
     return 0;
 }
 
+int
+test_print(int argc, char** argv)
+{
+    fixed_q4_12 x = -4.3382;
+    std::cout << x.to_string() << std::endl;
+
+    return 0;
+}
+
+int
+test_truncate(int argc, char** argv)
+{
+    using fixed = fixed_q4_12;
+    std::cout << fixed(2.074f).truncate() << std::endl;
+    std::cout << fixed(-4.99999f).truncate() << std::endl;
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -128,6 +165,10 @@ int main(int argc, char *argv[])
 
     if (command == "graph") {
         return plot_graph(argc - 2, &argv[2]);
+    } else if (command == "print") {
+        return test_print(argc - 2, &argv[2]);
+    } else if (command == "truncate") {
+        return test_truncate(argc - 2, &argv[2]);
     } else {
         std::cerr << "Unknown command " << std::quoted(command) << std::endl;
         return -1;
