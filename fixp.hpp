@@ -103,13 +103,14 @@ namespace fixp {
 
             static constexpr Storage get_trig_quadrant(const fixed<FracBits, Storage, Intermediate>& value) {
                 constexpr fixed inverse_half_pi = 2.0f / std::numbers::pi_v<float>;
-                Storage quadrant = (value * inverse_half_pi).truncate() % 4;
+                Storage quadrant = (value * inverse_half_pi).truncate();
 
-                if (value < 0) {
-                    quadrant = 3 - quadrant;
-                }
+                Storage sign = quadrant >> (sizeof(quadrant) * 8 - 1);
+                quadrant ^= sign;
+                quadrant += sign & 0x01;
+                quadrant &= 0x03;
 
-                return quadrant % 4;
+                return quadrant;
             }
 
             static constexpr fixed<FracBits, Storage, Intermediate>
