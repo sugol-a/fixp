@@ -120,10 +120,7 @@ namespace fixp {
                 constexpr fixed a1 = -0.16605f;
                 constexpr fixed a2 = 0.00761f;
 
-                const fixed x_pow2 = value * value;
-                const fixed x_pow4 = x_pow2 * x_pow2;
-
-                const fixed result = value * (fixed(1.0f) + (a1 * x_pow2) + (a2 * x_pow4));
+                const fixed result = value * (fixed(1.0f) + value * (a1 + (a2 * value * value)));
                 const fixed sign = fixed(static_cast<float>(quadrant < 2)) - fixed(static_cast<float>(quadrant >= 2));
 
                 return sign * result;
