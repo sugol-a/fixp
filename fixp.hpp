@@ -345,7 +345,10 @@ namespace fixp {
                 const bool is_negative = value < 0;
                 const fixed coeff = fixed(is_negative ? -1.0f : 1.0f);
 
-                return cos_quadrant(coeff * remapped, quadrant);
+                const int quadrant = get_trig_quadrant(value);
+                const fixed remapped = remap_trig_parameter(coeff * value, quadrant);
+
+                return cos_quadrant(remapped, quadrant);
             }
 
             template<const std::size_t Iterations=2, const std::size_t LutLimit=1024>
