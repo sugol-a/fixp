@@ -113,7 +113,7 @@ namespace benches {
         template<fixp::is_fixed T>
         void fixed_div() {
             T a = rng.uniform01();
-            T b = rng.uniform01();
+            T b = (rng.uniform01() + 1.0f);
 
             T result = a / b;
             nanobench::doNotOptimizeAway(result);
@@ -121,7 +121,7 @@ namespace benches {
 
         void float_div() {
             float a = rng.uniform01();
-            float b = rng.uniform01();
+            float b = (rng.uniform01() + 1.0f);
 
             float result = a / b;
             nanobench::doNotOptimizeAway(result);
