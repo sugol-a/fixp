@@ -60,7 +60,11 @@ namespace fixp {
              is_integral Storage = std::int16_t,
              is_integral Intermediate = std::int32_t>
     requires (sizeof(Storage) * 8 > FracBits && sizeof(Intermediate) >= sizeof(Storage))
-    class fixed {
+    class fixed final {
+        public:
+            using storage_type = Storage;
+            using intermediate_type = Intermediate;
+
         private:
             static constexpr std::size_t TotalBits = sizeof(Storage) * 8;
             static constexpr std::size_t IntegralBits = TotalBits - FracBits;
@@ -280,7 +284,7 @@ namespace fixp {
                 return raw;
             }
 
-            std::string to_string() const noexcept {
+            inline std::string to_string() const noexcept {
                 using fixed_aux = fixed<FracBits, Intermediate, Intermediate>;
 
                 std::stringstream ss;
