@@ -20,6 +20,7 @@
  */
 
 #include <cstdlib>
+#include <initializer_list>
 #include <sstream>
 #include <string>
 #include <array>
@@ -32,26 +33,28 @@ namespace fixp {
     concept is_integral = std::is_integral<T>::value;
 
     namespace internals {
-        template<typename T>
-        static constexpr T abs_cexpr(T x) {
-            if (x < static_cast<T>(0)) {
-                return -x;
-            } else {
-                return x;
+        namespace math {
+            template<typename T>
+            static constexpr T abs_cexpr(T x) {
+                if (x < static_cast<T>(0)) {
+                    return -x;
+                } else {
+                    return x;
+                }
             }
-        }
 
-        template<const std::size_t FracBits>
-        static constexpr float sqrt_cexpr(float x, float c, float prev) {
-            double dc = static_cast<double>(c);
-            double dprev = static_cast<double>(prev);
+            template<const std::size_t FracBits>
+            static constexpr float sqrt_cexpr(float x, float c, float prev) {
+                double dc = static_cast<double>(c);
+                double dprev = static_cast<double>(prev);
 
-            constexpr double epsilon = 1.0 / static_cast<double>(1 << FracBits);
+                constexpr double epsilon = 1.0 / static_cast<double>(1 << FracBits);
             
-            if (abs_cexpr(dprev - dc) < epsilon) {
-                return c;
-            } else {
-                return sqrt_cexpr<FracBits>(x, 0.5 * (c + x / c), c);
+                if (abs_cexpr(dprev - dc) < epsilon) {
+                    return c;
+                } else {
+                    return sqrt_cexpr<FracBits>(x, 0.5 * (c + x / c), c);
+                }
             }
         }
     }
@@ -65,7 +68,6 @@ namespace fixp {
             using storage_type = Storage;
             using intermediate_type = Intermediate;
 
-        private:
             static constexpr std::size_t TotalBits = sizeof(Storage) * 8;
             static constexpr std::size_t IntegralBits = TotalBits - FracBits;
             static constexpr Storage Scale = 1 << FracBits;
@@ -105,6 +107,7 @@ namespace fixp {
                 return fixed::from_raw(static_cast<Storage>(remapped.raw));
             }
 
+        public:
             static constexpr Storage get_trig_quadrant(const fixed<FracBits, Storage, Intermediate>& value) {
                 constexpr fixed inverse_half_pi = 2.0f / std::numbers::pi_v<float>;
                 Storage quadrant = (value * inverse_half_pi).truncate();
@@ -116,6 +119,7 @@ namespace fixp {
 
                 return quadrant;
             }
+        private:
 
             static constexpr fixed<FracBits, Storage, Intermediate>
             sin_quadrant(const fixed<FracBits, Storage, Intermediate>& value, Storage quadrant) {
@@ -276,6 +280,10 @@ namespace fixp {
                 return raw <= other.raw;
             }
 
+            explicit operator Storage() const noexcept {
+                return raw;
+            }
+
             constexpr float to_float() const noexcept {
                 return static_cast<float>(raw) / static_cast<float>(Scale);
             }
@@ -377,7 +385,7 @@ namespace fixp {
 
                     for (std::size_t i = 1; i < NElements; i++) {
                         float x_float = static_cast<float>(i);
-                        entries[i] = fixed_aux(internals::sqrt_cexpr<FracBits>(x_float, x_float, 0.0f));
+                        entries[i] = fixed_aux(internals::math::sqrt_cexpr<FracBits>(x_float, x_float, 0.0f));
                     }
 
                     return entries;
@@ -419,5 +427,22 @@ namespace fixp {
     template<typename T>
     concept is_fixed = requires(T a) {
         { fixed(a) } -> std::same_as<T>;
+    };
+
+    template<is_fixed T, const std::size_t Dim>
+    class packed final {
+        private:
+            std::array<T, Dim> values;
+
+        public:
+            constexpr packed(std::initializer_list<T> values) {
+                static_assert(values.size() == Dim, "Expected initializer list size == Dim");
+            }
+
+            inline packed operator+(const packed& other) {
+                #ifdef __ARM_NEON
+                
+                #endif
+            }
     };
 }

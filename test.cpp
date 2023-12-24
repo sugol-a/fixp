@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <functional>
@@ -6,6 +7,8 @@
 #include <fixp.hpp>
 #include <utility>
 #include <sciplot/sciplot.hpp>
+
+#include <simd_neon.hpp>
 
 using fixed_q16_16 = fixp::fixed<16, std::int32_t, std::int64_t>;
 using fixed_q4_12 = fixp::fixed<12, std::int16_t, std::int32_t>;
@@ -124,7 +127,8 @@ plot_graph(int argc, char** argv)
     std::cout << "Graph : Plotting graph " << std::quoted(graph_name) << std::endl;
 
     sciplot::Plot2D plot;
-    GRAPH_FUNCS[index].second(plot);
+    const auto [name, plot_func] = GRAPH_FUNCS[index];
+    plot_func(plot);
 
     sciplot::Figure fig = {{plot}};
     sciplot::Canvas canvas = {{fig}};
@@ -154,6 +158,29 @@ test_truncate(int argc, char** argv)
     return 0;
 }
 
+int
+test_simd()
+{
+    using inttype = std::int16_t;
+    constexpr std::size_t N = 256000;
+    inttype a[N];
+    inttype b[N];
+    inttype res[N];
+    
+    for (int i = 0; i < N; i++) {
+        a[i] = rand() % 16;
+        b[i] = rand() % 16;
+    }
+
+    fixp::internals::simd_neon::shl_immediate<inttype, 2>(a, res, N);
+
+    for (int i = 0; i < N; i++) {
+        std::cout << a[i] << " << 1 = " << res[i] << std::endl;
+    }
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -169,6 +196,8 @@ int main(int argc, char *argv[])
         return test_print(argc - 2, &argv[2]);
     } else if (command == "truncate") {
         return test_truncate(argc - 2, &argv[2]);
+    } else if (command == "simd") {
+        return test_simd();
     } else {
         std::cerr << "Unknown command " << std::quoted(command) << std::endl;
         return -1;
