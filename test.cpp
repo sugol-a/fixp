@@ -26,7 +26,7 @@ namespace graphs {
         plot.legend();
 
         sciplot::Vec float_sin = x_values.apply([](double x) { return std::sin(x); });
-        sciplot::Vec fixed_sin = x_values.apply([](double x) { return static_cast<double>(T::sin(T(x)).to_float()); });
+        sciplot::Vec fixed_sin = x_values.apply([](double x) { return static_cast<double>(fixp::sin(T(x))); });
 
         plot.drawCurve(x_values, float_sin).label("Float sin(x)");
         plot.drawCurve(x_values, fixed_sin).label("Fixed sin(x)");
@@ -43,7 +43,7 @@ namespace graphs {
         plot.legend();
 
         sciplot::Vec float_cos = x_values.apply([](double x) { return std::cos(x); });
-        sciplot::Vec fixed_cos = x_values.apply([](double x) { return static_cast<double>(T::cos(T(x)).to_float()); });
+        sciplot::Vec fixed_cos = x_values.apply([](double x) { return static_cast<double>(fixp::cos(T(x))); });
 
         plot.drawCurve(x_values, float_cos).label("Float cos(x)");
         plot.drawCurve(x_values, fixed_cos).label("Fixed cos(x)");
@@ -60,26 +60,26 @@ namespace graphs {
         plot.legend();
 
         sciplot::Vec float_sqrt = x_values.apply([](double x) { return std::sqrt(x); });
-        sciplot::Vec fixed_sqrt = x_values.apply([](double x) { return static_cast<double>(T::sqrt(T(x)).to_float()); });
+        sciplot::Vec fixed_sqrt = x_values.apply([](double x) { return static_cast<double>(fixp::sqrt(T(x))); });
 
-        plot.drawCurve(x_values, float_sqrt).label("Float cos(x)");
-        plot.drawCurve(x_values, fixed_sqrt).label("Fixed cos(x)");
+        plot.drawCurve(x_values, float_sqrt).label("Float sqrt(x)");
+        plot.drawCurve(x_values, fixed_sqrt).label("Fixed sqrt(x)");
     }
 
-    template<fixp::is_fixed T>
-    void fixed_trig_quadrant(sciplot::Plot2D& plot) {
-        sciplot::Vec x_values = sciplot::linspace(-2.0f * std::numbers::pi, 2.0f * std::numbers::pi, 200);
-        sciplot::Vec quadrants = x_values.apply([](double x) { return static_cast<double>(T::get_trig_quadrant(x)); });
+    // template<fixp::is_fixed T>
+    // void fixed_trig_quadrant(sciplot::Plot2D& plot) {
+    //     sciplot::Vec x_values = sciplot::linspace(-2.0f * std::numbers::pi, 2.0f * std::numbers::pi, 200);
+    //     sciplot::Vec quadrants = x_values.apply([](double x) { return static_cast<double>(T::get_trig_quadrant(x)); });
 
-        plot.xlabel("x");
-        plot.ylabel("Trig Quadrant");
+    //     plot.xlabel("x");
+    //     plot.ylabel("Trig Quadrant");
 
-        plot.xrange(-2.0f * std::numbers::pi, 2.0f * std::numbers::pi);
-        plot.yrange(-5.0, 5.0);
-        plot.legend();
+    //     plot.xrange(-2.0f * std::numbers::pi, 2.0f * std::numbers::pi);
+    //     plot.yrange(-5.0, 5.0);
+    //     plot.legend();
 
-        plot.drawCurve(x_values, quadrants).label("Quadrant");
-    }
+    //     plot.drawCurve(x_values, quadrants).label("Quadrant");
+    // }
 }
 
 static const std::pair<std::string, std::function<void(sciplot::Plot2D&)> > GRAPH_FUNCS[] = {
@@ -92,9 +92,9 @@ static const std::pair<std::string, std::function<void(sciplot::Plot2D&)> > GRAP
     { "sqrt_q16.16" , graphs::fixed_sqrt<fixed_q16_16> },
     { "sqrt_q4.12"  , graphs::fixed_sqrt<fixed_q4_12> },
     { "sqrt_q8.8"   , graphs::fixed_sqrt<fixed_q8_8> },
-    { "quad_q16.16" , graphs::fixed_trig_quadrant<fixed_q16_16> },
-    { "quad_q4.12"  , graphs::fixed_trig_quadrant<fixed_q4_12> },
-    { "quad_q8.8"   , graphs::fixed_trig_quadrant<fixed_q8_8> },
+    // { "quad_q16.16" , graphs::fixed_trig_quadrant<fixed_q16_16> },
+    // { "quad_q4.12"  , graphs::fixed_trig_quadrant<fixed_q4_12> },
+    // { "quad_q8.8"   , graphs::fixed_trig_quadrant<fixed_q8_8> },
 };
 
 static constexpr std::size_t N_GRAPH_FUNCS = sizeof(GRAPH_FUNCS) / sizeof(GRAPH_FUNCS[0]);
@@ -140,20 +140,11 @@ plot_graph(int argc, char** argv)
 }
 
 int
-test_print(int argc, char** argv)
-{
-    fixed_q4_12 x = -4.3382;
-    std::cout << x.to_string() << std::endl;
-
-    return 0;
-}
-
-int
 test_truncate(int argc, char** argv)
 {
     using fixed = fixed_q4_12;
-    std::cout << fixed(2.074f).truncate() << std::endl;
-    std::cout << fixed(-4.99999f).truncate() << std::endl;
+    std::cout << fixp::truncate(fixed(2.074f)) << std::endl;
+    std::cout << fixp::truncate(fixed(-4.99999f)) << std::endl;
 
     return 0;
 }
@@ -181,6 +172,20 @@ test_simd()
     return 0;
 }
 
+int
+test_cstr()
+{
+    fixed_q4_12 x = 1.25999f;
+    char buffer[16];
+
+    fixp::to_cstring(x, buffer, sizeof(buffer));
+    std::cout << buffer << std::endl;
+
+    std::cout << fixp::to_string(x) << std::endl;
+
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -192,12 +197,12 @@ int main(int argc, char *argv[])
 
     if (command == "graph") {
         return plot_graph(argc - 2, &argv[2]);
-    } else if (command == "print") {
-        return test_print(argc - 2, &argv[2]);
     } else if (command == "truncate") {
         return test_truncate(argc - 2, &argv[2]);
     } else if (command == "simd") {
         return test_simd();
+    } else if (command == "cstr") {
+        return test_cstr();
     } else {
         std::cerr << "Unknown command " << std::quoted(command) << std::endl;
         return -1;

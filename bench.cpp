@@ -22,7 +22,7 @@ namespace benches {
         template<fixp::is_fixed T>
         void fixed_sqrt() {
             T f = rng.uniform01() * 100.0f;
-            T result = T::sqrt(f);
+            T result = fixp::sqrt(f);
 
             nanobench::doNotOptimizeAway(result);
         }
@@ -36,7 +36,7 @@ namespace benches {
         template<fixp::is_fixed T>
         void fixed_sin() {
             T f = 2.0f * (rng.uniform01() - 0.5f) * two_pi; // [-2pi,2pi]
-            T result = T::sin(f);
+            T result = fixp::sin(f);
             nanobench::doNotOptimizeAway(result);
         }
 
@@ -49,7 +49,7 @@ namespace benches {
         template<fixp::is_fixed T>
         void fixed_cos() {
             T f = 2.0f * (rng.uniform01() - 0.5f) * two_pi;
-            T result = T::cos(f);
+            T result = fixp::cos(f);
             nanobench::doNotOptimizeAway(result);
         }
 
@@ -134,9 +134,18 @@ namespace benches {
         template<fixp::is_fixed T>
         void fixed_to_string() {
             T f = (rng.uniform01() - 0.5f) * 2.0f;
-            std::string result = f.to_string();
+            std::string result = fixp::to_string(f);
 
             nanobench::doNotOptimizeAway(result);
+        }
+
+        template<fixp::is_fixed T>
+        void fixed_to_cstring() {
+            T f = (rng.uniform01() - 0.5f) * 2.0f;
+            char buffer[64];
+            fixp::to_cstring(f, buffer, sizeof(buffer));
+
+            nanobench::doNotOptimizeAway(buffer);
         }
     }
 
@@ -214,50 +223,57 @@ using fixed_q8_8 = fixp::fixed<8, std::int16_t, std::int32_t>;
 int main(int argc, char *argv[])
 {
     const bench_case cases[] = {
-        { "float sqrt",        benches::transcendental::float_sqrt              },
-        { "fixed sqrt Q16.16", benches::transcendental::fixed_sqrt<fixed_q16_16>},
-        { "fixed sqrt Q4.12",  benches::transcendental::fixed_sqrt<fixed_q4_12> },
-        { "fixed sqrt Q8.8",   benches::transcendental::fixed_sqrt<fixed_q8_8>  },
-        { "float sin",         benches::transcendental::float_sin               },
-        { "fixed sin Q16.16",  benches::transcendental::fixed_sin<fixed_q16_16> },
-        { "fixed sin Q4.12",   benches::transcendental::fixed_sin<fixed_q4_12>  },
-        { "fixed sin Q8.8",    benches::transcendental::fixed_sin<fixed_q8_8>   },
-        { "float cos",         benches::transcendental::float_cos               },
-        { "fixed cos Q16.16",  benches::transcendental::fixed_cos<fixed_q16_16> },
-        { "fixed cos Q4.12",   benches::transcendental::fixed_cos<fixed_q4_12>  },
-        { "fixed cos Q8.8",    benches::transcendental::fixed_cos<fixed_q8_8>   },
+        {"float sqrt",         benches::transcendental::float_sqrt            },
+        { "fixed sqrt Q16.16",
+         benches::transcendental::fixed_sqrt<fixed_q16_16>                    },
+        { "fixed sqrt Q4.12",
+         benches::transcendental::fixed_sqrt<fixed_q4_12>                     },
+        { "fixed sqrt Q8.8",   benches::transcendental::fixed_sqrt<fixed_q8_8>},
+        { "float sin",         benches::transcendental::float_sin             },
+        { "fixed sin Q16.16",
+         benches::transcendental::fixed_sin<fixed_q16_16>                     },
+        { "fixed sin Q4.12",   benches::transcendental::fixed_sin<fixed_q4_12>},
+        { "fixed sin Q8.8",    benches::transcendental::fixed_sin<fixed_q8_8> },
+        { "float cos",         benches::transcendental::float_cos             },
+        { "fixed cos Q16.16",
+         benches::transcendental::fixed_cos<fixed_q16_16>                     },
+        { "fixed cos Q4.12",   benches::transcendental::fixed_cos<fixed_q4_12>},
+        { "fixed cos Q8.8",    benches::transcendental::fixed_cos<fixed_q8_8> },
 
-        { "float add",         benches::arithmetic::float_add                   },
-        { "fixed add Q16.16",  benches::arithmetic::fixed_add<fixed_q16_16>     },
-        { "fixed add Q4.12",   benches::arithmetic::fixed_add<fixed_q4_12>      },
-        { "fixed add Q8.8",    benches::arithmetic::fixed_add<fixed_q8_8>       },
-        { "float sub"        , benches::arithmetic::float_sub },
-        { "fixed sub Q16.16" , benches::arithmetic::fixed_sub<fixed_q16_16> },
-        { "fixed sub Q4.12"  , benches::arithmetic::fixed_sub<fixed_q4_12> },
-        { "fixed sub Q8.8"   , benches::arithmetic::fixed_sub<fixed_q8_8> },
-        { "float mul"        , benches::arithmetic::float_mul },
-        { "fixed mul Q16.16" , benches::arithmetic::fixed_mul<fixed_q16_16> },
-        { "fixed mul Q4.12"  , benches::arithmetic::fixed_mul<fixed_q4_12> },
-        { "fixed mul Q8.8"   , benches::arithmetic::fixed_mul<fixed_q8_8> },
-        { "float div"        , benches::arithmetic::float_div },
-        { "fixed div Q16.16" , benches::arithmetic::fixed_div<fixed_q16_16> },
-        { "fixed div Q4.12"  , benches::arithmetic::fixed_div<fixed_q4_12> },
-        { "fixed div Q8.8"   , benches::arithmetic::fixed_div<fixed_q8_8> },
-    
-        { "to string Q16.16"  , benches::util::fixed_to_string<fixed_q16_16> },
-        { "to string Q4.12"   , benches::util::fixed_to_string<fixed_q4_12> },
-        { "to string Q8.8"    , benches::util::fixed_to_string<fixed_q8_8> },
+        { "float add",         benches::arithmetic::float_add                 },
+        { "fixed add Q16.16",  benches::arithmetic::fixed_add<fixed_q16_16>   },
+        { "fixed add Q4.12",   benches::arithmetic::fixed_add<fixed_q4_12>    },
+        { "fixed add Q8.8",    benches::arithmetic::fixed_add<fixed_q8_8>     },
+        { "float sub",         benches::arithmetic::float_sub                 },
+        { "fixed sub Q16.16",  benches::arithmetic::fixed_sub<fixed_q16_16>   },
+        { "fixed sub Q4.12",   benches::arithmetic::fixed_sub<fixed_q4_12>    },
+        { "fixed sub Q8.8",    benches::arithmetic::fixed_sub<fixed_q8_8>     },
+        { "float mul",         benches::arithmetic::float_mul                 },
+        { "fixed mul Q16.16",  benches::arithmetic::fixed_mul<fixed_q16_16>   },
+        { "fixed mul Q4.12",   benches::arithmetic::fixed_mul<fixed_q4_12>    },
+        { "fixed mul Q8.8",    benches::arithmetic::fixed_mul<fixed_q8_8>     },
+        { "float div",         benches::arithmetic::float_div                 },
+        { "fixed div Q16.16",  benches::arithmetic::fixed_div<fixed_q16_16>   },
+        { "fixed div Q4.12",   benches::arithmetic::fixed_div<fixed_q4_12>    },
+        { "fixed div Q8.8",    benches::arithmetic::fixed_div<fixed_q8_8>     },
 
-        // { "simd mul 8-bit"       , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::mul_simd<std::int8_t>) },
-        // { "classical mul 8-bit"  , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::mul_classical<std::int8_t>) },
-        // { "simd mul 16-bit"      , benches::simd::bench_simd<std::int16_t, 8192>(benches::simd::mul_simd<std::int16_t>) },
-        // { "classical mul 16-bit" , benches::simd::bench_simd<std::int16_t, 8192>(benches::simd::mul_classical<std::int16_t>) },
-        // { "simd mul 32-bit"      , benches::simd::bench_simd<std::int32_t, 8192>(benches::simd::mul_simd<std::int32_t>) },
-        // { "classical mul 32-bit" , benches::simd::bench_simd<std::int32_t, 8192>(benches::simd::mul_classical<std::int32_t>) },
-        // { "simd add 8-bit"       , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::add_simd<std::int8_t>) },
-        // { "classical add 8-bit"  , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::add_classical<std::int8_t>) },
-        { "simd add 16-bit"      , benches::simd::bench_simd<std::int16_t, 819200>(benches::simd::add_simd<std::int16_t>) },
-        { "classical add 16-bit" , benches::simd::bench_simd<std::int16_t, 819200>(benches::simd::add_classical<std::int16_t>) },
+        { "to string Q16.16",  benches::util::fixed_to_string<fixed_q16_16>   },
+        { "to string Q4.12",   benches::util::fixed_to_string<fixed_q4_12>    },
+        { "to string Q8.8",    benches::util::fixed_to_string<fixed_q8_8>     },
+        { "to C string Q16.16"  , benches::util::fixed_to_cstring<fixed_q16_16> },
+        { "to C string Q4.12"   , benches::util::fixed_to_cstring<fixed_q4_12> },
+        { "to C string Q8.8"    , benches::util::fixed_to_cstring<fixed_q8_8> },
+
+        { "simd mul 8-bit"       , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::mul_simd<std::int8_t>) },
+        { "classical mul 8-bit"  , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::mul_classical<std::int8_t>) },
+        { "simd mul 16-bit"      , benches::simd::bench_simd<std::int16_t, 8192>(benches::simd::mul_simd<std::int16_t>) },
+        { "classical mul 16-bit" , benches::simd::bench_simd<std::int16_t, 8192>(benches::simd::mul_classical<std::int16_t>) },
+        { "simd mul 32-bit"      , benches::simd::bench_simd<std::int32_t, 8192>(benches::simd::mul_simd<std::int32_t>) },
+        { "classical mul 32-bit" , benches::simd::bench_simd<std::int32_t, 8192>(benches::simd::mul_classical<std::int32_t>) },
+        { "simd add 8-bit"       , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::add_simd<std::int8_t>) },
+        { "classical add 8-bit"  , benches::simd::bench_simd<std::int8_t, 8192>(benches::simd::add_classical<std::int8_t>) },
+        { "simd add 16-bit"      , benches::simd::bench_simd<std::int16_t, 8192>(benches::simd::add_simd<std::int16_t>) },
+        { "classical add 16-bit" , benches::simd::bench_simd<std::int16_t, 8192>(benches::simd::add_classical<std::int16_t>) },
         { "simd add 32-bit"      , benches::simd::bench_simd<std::int32_t, 8192>(benches::simd::add_simd<std::int32_t>) },
         { "classical add 32-bit" , benches::simd::bench_simd<std::int32_t, 8192>(benches::simd::add_classical<std::int32_t>) },
     };
